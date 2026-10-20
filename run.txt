@@ -1,0 +1,82 @@
+Sostituisci ID_PASTE con l'ID del Pastebin contenente send.ps1.
+MeshCentral: Windows PowerShell > Run as agent.
+Avvio manuale: PowerShell come amministratore.
+
+
+1. AVVIO PREDEFINITO
+
+irm 'https://pastebin.com/raw/ID_PASTE' | iex
+
+Sul Desktop di tutti gli utenti troverai: Infinity2027.rdp
+Server: 192.168.10.201
+Dominio: CONIGLIARO.local
+
+
+2. CAMBIA SOLO IL NOME
+
+& ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID_PASTE'))) --nome 'Infinity2024'
+
+Sul Desktop di tutti gli utenti troverai: Infinity2024.rdp
+Server: 192.168.10.201 (predefinito)
+Dominio: CONIGLIARO.local (predefinito)
+
+
+3. CAMBIA SOLO L'IP
+
+& ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID_PASTE'))) --ip '192.168.10.202'
+
+Sul Desktop di tutti gli utenti troverai: Infinity2027.rdp
+Server: 192.168.10.202
+Dominio: CONIGLIARO.local (predefinito)
+
+
+4. CAMBIA NOME E IP
+
+& ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID_PASTE'))) --nomefile 'Infinity2024' --ip '192.168.10.202'
+
+Sul Desktop di tutti gli utenti troverai: Infinity2024.rdp
+Server: 192.168.10.202
+Dominio: CONIGLIARO.local (predefinito)
+
+
+5. CONFIGURAZIONE PERSONALIZZATA: NOME, SERVER E DOMINIO
+
+& ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID_PASTE'))) --nome 'Ufficio Nuovo' --server 'rdp.azienda.local:3390' --dominio 'AZIENDA.local'
+
+Sul Desktop di tutti gli utenti troverai: Ufficio Nuovo.rdp
+Server: rdp.azienda.local, porta 3390
+Dominio: AZIENDA.local
+
+
+6. ANTEPRIMA DELLA CONFIGURAZIONE, SENZA MODIFICHE
+
+& ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID_PASTE'))) --nome 'Infinity2024' --ip '192.168.10.202' --anteprima
+
+Nessun file viene creato sul Desktop.
+Mostra la configurazione prevista: Infinity2024.rdp verso 192.168.10.202.
+
+
+7. VERIFICA DEI VINCOLI LOCALI, SENZA MODIFICHE
+
+& ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID_PASTE'))) --verifica
+
+Nessun file viene creato sul Desktop.
+Mostra la diagnostica locale per il server predefinito 192.168.10.201.
+
+
+8. AVVIO DAL FILE LOCALE, CON VALORI PREDEFINITI
+
+.\send.ps1
+
+Sul Desktop di tutti gli utenti troverai: Infinity2027.rdp
+Server: 192.168.10.201
+Dominio: CONIGLIARO.local
+
+
+9. AVVIO DAL FILE LOCALE, CON NOME E IP PERSONALIZZATI
+
+.\send.ps1 --nome 'Infinity2024' --ip '192.168.10.202'
+
+Sul Desktop di tutti gli utenti troverai: Infinity2024.rdp
+Server: 192.168.10.202
+Dominio: CONIGLIARO.local (predefinito)
