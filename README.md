@@ -20,6 +20,8 @@ Manualmente, usa **PowerShell come amministratore**. Da una finestra non elevata
 
 Ogni parametro omesso usa il predefinito: cambiando solo il nome, l'IP resta quello indicato. Non vengono recuperate personalizzazioni precedenti. `.rdp` viene aggiunto se manca; il server accetta IPv4 o DNS, anche con porta. Gli esempi sono tutti in **[run.txt](run.txt)**.
 
+Con l'avvio completamente predefinito (`irm ... | iex`, senza argomenti) viene cancellata la credenziale RDP già salvata per il server dagli utenti attualmente collegati. Se specifichi anche un solo argomento, per esempio `--nome`, `--ip` o `--dominio`, nessuna credenziale viene rimossa a meno di aggiungere esplicitamente `--cancella-credenziali-salvate`. Dopo la cancellazione ogni utente dovrà inserire di nuovo la password e potrà scegliere **Memorizza credenziali**. Per cancellare le credenziali di tutti gli utenti collegati, esegui il deploy come `NT AUTHORITY\SYSTEM`; da PowerShell amministrativo viene cancellata direttamente la credenziale dell'utente che lo avvia.
+
 ## Verifica e distribuzione
 
 **`--anteprima`** mostra configurazione e contenuto RDP previsto. **`--verifica`** controlla Credential Guard, alcuni divieti locali sulle credenziali e i processi RDP aperti. Sono modalità separate, senza modifiche né elevazione. La verifica non prova la connessione o l'accessibilità di tutti i Desktop; un controllo illeggibile resta sconosciuto. `NoKnownBlockers` non garantisce l'accesso riuscito.

@@ -12,7 +12,7 @@
         param([bool]$IsSystem, [bool]$IsAdmin, [bool]$Os64, [bool]$Process64, [int]$SessionId, [bool]$Preview)
         $elevate = -not $Preview -and -not ($IsSystem -or $IsAdmin)
         if ($elevate -and $SessionId -eq 0) {
-            throw 'Sessione non interattiva senza privilegi. In MeshCentral scegli Windows PowerShell > Run as agent (servizio SYSTEM).'
+            throw 'Sessione non interattiva senza privilegi amministrativi. Avvia PowerShell come amministratore oppure esegui il comando con NT AUTHORITY\SYSTEM.'
         }
         [pscustomobject]@{ Elevate=$elevate; Native64=($Os64 -and -not $Process64) }
     }
@@ -73,6 +73,7 @@
         $config = [ordered]@{
             NomeFile = 'Infinity2027'; Server = '192.168.10.201'
             Dominio = 'CONIGLIARO.local'; Anteprima = $false; Verifica = $false
+            CancellaCredenzialiSalvate = $false
         }
         $seen = @{}
         for ($i = 0; $i -lt $Arguments.Count; $i++) {
@@ -83,11 +84,12 @@
                 '^--?dominio$' { 'Dominio'; break }
                 '^--?(anteprima|whatif)$' { 'Anteprima'; break }
                 '^--?verifica$' { 'Verifica'; break }
-                default { throw "Parametro sconosciuto: $option. Usa --nome, --ip, --dominio, --anteprima, --verifica." }
+                '^--?cancella-credenziali-salvate$' { 'CancellaCredenzialiSalvate'; break }
+                default { throw "Parametro sconosciuto: $option. Usa --nome, --ip, --dominio, --anteprima, --verifica, --cancella-credenziali-salvate." }
             }
             if ($seen.ContainsKey($key)) { throw "Parametro duplicato: $option" }
             $seen[$key] = $true
-            if ($key -in @('Anteprima', 'Verifica')) { $config[$key] = $true; continue }
+            if ($key -in @('Anteprima', 'Verifica', 'CancellaCredenzialiSalvate')) { $config[$key] = $true; continue }
             $i++
             if ($i -ge $Arguments.Count -or [string]$Arguments[$i] -match '^-') { throw "Manca il valore di $option." }
             $value = ([string]$Arguments[$i]).Trim()
@@ -95,6 +97,9 @@
             $config[$key] = $value
         }
         if ($config.Anteprima -and $config.Verifica) { throw 'Usa --anteprima oppure --verifica, separatamente.' }
+        # Avvio completamente predefinito: pulisce le credenziali degli utenti collegati.
+        # Con qualunque argomento esplicito la pulizia richiede il relativo flag.
+        if ($Arguments.Count -eq 0) { $config.CancellaCredenzialiSalvate = $true }
         $name = $config.NomeFile -replace '(?i)\.rdp$', ''
         if ($name.Length -gt 100 -or $name -match '[<>:"/\\|?*\x00-\x1f]' -or
             $name -match '[ .]$' -or $name -match '^(?i:CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|$)' -or
@@ -246,7 +251,7 @@
             # separato e prefisso NetBIOS gia presente nel nome utente.
             "domain:s:$($Config.Dominio)"
             "username:s:$($Config.NetBiosDominio)\"
-            'prompt for credentials:i:1'
+            'prompt for credentials:i:0'
             'promptcredentialonce:i:1'
             'enablecredsspsupport:i:1'
             'negotiate security layer:i:1'
@@ -620,6 +625,75 @@
         Write-Host "Backup e diagnostica: $script:RunDirectory"
     }
 
+    function Remove-SavedCredentialsFromInteractiveUsers {
+        param([string]$ServerHost)
+        if (-not ('SendRdpUserProcess' -as [type])) {
+            Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class SendRdpUserProcess {
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+    struct STARTUPINFO {
+        public int cb; public string lpReserved; public string lpDesktop; public string lpTitle;
+        public int dwX; public int dwY; public int dwXSize; public int dwYSize; public int dwXCountChars;
+        public int dwYCountChars; public int dwFillAttribute; public int dwFlags; public short wShowWindow;
+        public short cbReserved2; public IntPtr lpReserved2; public IntPtr hStdInput; public IntPtr hStdOutput; public IntPtr hStdError;
+    }
+    [StructLayout(LayoutKind.Sequential)] struct PROCESS_INFORMATION {
+        public IntPtr hProcess; public IntPtr hThread; public int processId; public int threadId;
+    }
+    [DllImport("wtsapi32.dll", SetLastError=true)] static extern bool WTSQueryUserToken(uint sessionId, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError=true)] static extern bool CreateProcessAsUser(
+        IntPtr token, string app, string command, IntPtr pa, IntPtr ta, bool inherit, uint flags,
+        IntPtr environment, string directory, ref STARTUPINFO si, out PROCESS_INFORMATION pi);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool CloseHandle(IntPtr handle);
+    public static int Run(uint sessionId, string commandLine) {
+        IntPtr token;
+        if (!WTSQueryUserToken(sessionId, out token)) return -1000 - Marshal.GetLastWin32Error();
+        try {
+            STARTUPINFO si = new STARTUPINFO();
+            si.cb = Marshal.SizeOf(si);
+            si.lpDesktop = "winsta0\\default";
+            si.dwFlags = 1;
+            si.wShowWindow = 0;
+            PROCESS_INFORMATION pi;
+            bool ok = CreateProcessAsUser(token, null, commandLine, IntPtr.Zero, IntPtr.Zero, false, 0x08000000,
+                IntPtr.Zero, Environment.GetFolderPath(Environment.SpecialFolder.System), ref si, out pi);
+            if (!ok) return -2000 - Marshal.GetLastWin32Error();
+            CloseHandle(pi.hThread); CloseHandle(pi.hProcess);
+            return 0;
+        } finally { CloseHandle(token); }
+    }
+}
+'@
+        }
+        $sessions = @(Get-CimInstance Win32_Process -Filter "Name='explorer.exe'" -ErrorAction Stop |
+            ForEach-Object { [int]$_.SessionId } | Where-Object { $_ -gt 0 } | Select-Object -Unique)
+        if (-not $sessions.Count) {
+            Write-Warning "Nessun utente interattivo collegato: impossibile cancellare TERMSRV/$ServerHost."
+            return
+        }
+        $target = "TERMSRV/$ServerHost"
+        $results = [Collections.Generic.List[object]]::new()
+        $currentSession = [Diagnostics.Process]::GetCurrentProcess().SessionId
+        $isSystem = ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -eq 'S-1-5-18')
+        foreach ($session in $sessions) {
+            if (-not $isSystem -and $session -eq $currentSession) {
+                & "$env:SystemRoot\System32\cmdkey.exe" "/delete:$target" | Out-Host
+                $exitCode = $LASTEXITCODE
+            } else {
+                $command = "`"$env:SystemRoot\System32\cmdkey.exe`" /delete:$target"
+                $exitCode = [SendRdpUserProcess]::Run([uint32]$session, $command)
+            }
+            $results.Add([pscustomobject]@{ SessionId=$session; Target=$target; ExitCode=$exitCode })
+            if ($exitCode -ne 0) {
+                throw "Impossibile cancellare $target nella sessione $session (codice $exitCode)."
+            }
+            Write-Host "Credenziale salvata rimossa per $target nella sessione $session."
+        }
+        $results | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $script:RunDirectory 'credential-cleanup.json') -Encoding UTF8
+    }
+
     function Set-RdpMachineConfiguration {
         param($Config)
         $ts = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
@@ -677,6 +751,10 @@
         }
         try {
             Write-Host '[2/5] Applico e verifico le impostazioni client.'
+            if ($Config.CancellaCredenzialiSalvate) {
+                Write-Host '[2/5] Cancello le credenziali RDP salvate dagli utenti collegati.'
+                Remove-SavedCredentialsFromInteractiveUsers $Config.ServerHost
+            }
             Set-RdpMachineConfiguration $Config
             Write-Host '[3/5] Aggiorno i profili e individuo i Desktop.'
             $profiles = Update-RdpUserProfiles $PublicDesktop
