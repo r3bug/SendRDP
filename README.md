@@ -1,4 +1,4 @@
-﻿# Distribuzione RDP
+# Distribuzione RDP
 
 - **[send.ps1](send.ps1)**: script autonomo per i client Windows 10/11.
 - **[run.txt](run.txt)**: tutti i comandi pronti per MeshCentral, Pastebin e PowerShell locale, con il nome RDP risultante per ogni esempio.
@@ -28,7 +28,7 @@ Il deploy aggiorna e rilegge le impostazioni client, firma il nuovo RDP e lo pub
 
 **Nessun riavvio del PC, logout, riavvio dei servizi o chiusura delle connessioni viene richiesto.** Gli utenti devono aprire il nuovo file in una **nuova finestra RDP**; quelle già aperte possono mantenere le impostazioni precedenti.
 
-Il dominio è preimpostato nel file, senza eseguire il join al dominio. Il collegamento usa il dominio DNS (`domain:s:CONIGLIARO.local`) e il prefisso NetBIOS (`username:s:CONIGLIARO\`) come nello script storico già collaudato. Nella finestra credenziali l'utente deve completare il nome con il proprio account di dominio e inserire la password. Il prompt viene sempre richiesto per evitare il riuso ambiguo di un nome locale o di credenziali precedenti. Il client può quindi restare in workgroup. Ogni utente può scegliere **Memorizza credenziali**, se consentito. Prima della distribuzione al gruppo, prova accesso, credenziali salvate e reindirizzamenti su un client.
+Il dominio è preimpostato nel file, senza eseguire il join al dominio. Ogni utente inserisce le proprie credenziali e sceglie **Memorizza credenziali**, se consentito. Prima della distribuzione al gruppo, prova accesso, credenziali salvate e reindirizzamenti su un client.
 
 ## Profili offline e limiti
 
