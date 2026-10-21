@@ -687,9 +687,10 @@ public static class SendRdpUserProcess {
             }
             $results.Add([pscustomobject]@{ SessionId=$session; Target=$target; ExitCode=$exitCode })
             if ($exitCode -ne 0) {
-                throw "Impossibile cancellare $target nella sessione $session (codice $exitCode)."
+                Write-Warning "Nessuna credenziale $target rimossa nella sessione $session (cmdkey codice $exitCode). Il deploy continua."
+            } else {
+                Write-Host "Credenziale salvata rimossa per $target nella sessione $session."
             }
-            Write-Host "Credenziale salvata rimossa per $target nella sessione $session."
         }
         $results | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $script:RunDirectory 'credential-cleanup.json') -Encoding UTF8
     }
