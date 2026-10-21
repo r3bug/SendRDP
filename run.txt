@@ -10,6 +10,7 @@ irm 'https://pastebin.com/raw/ID_PASTE' | iex
 Sul Desktop di tutti gli utenti troverai: Infinity2027.rdp
 Server: 192.168.10.201
 Dominio: CONIGLIARO.local
+Il prompt mostra il dominio CONIGLIARO.local e il prefisso account CONIGLIARO\; completalo con il nome utente di dominio.
 
 
 2. CAMBIA SOLO IL NOME
@@ -19,6 +20,7 @@ Dominio: CONIGLIARO.local
 Sul Desktop di tutti gli utenti troverai: Infinity2024.rdp
 Server: 192.168.10.201 (predefinito)
 Dominio: CONIGLIARO.local (predefinito)
+Il prompt mostra il dominio CONIGLIARO.local e il prefisso account CONIGLIARO\; completalo con il nome utente di dominio.
 
 
 3. CAMBIA SOLO L'IP
@@ -28,6 +30,7 @@ Dominio: CONIGLIARO.local (predefinito)
 Sul Desktop di tutti gli utenti troverai: Infinity2027.rdp
 Server: 192.168.10.202
 Dominio: CONIGLIARO.local (predefinito)
+Il prompt mostra il dominio CONIGLIARO.local e il prefisso account CONIGLIARO\; completalo con il nome utente di dominio.
 
 
 4. CAMBIA NOME E IP
@@ -37,6 +40,7 @@ Dominio: CONIGLIARO.local (predefinito)
 Sul Desktop di tutti gli utenti troverai: Infinity2024.rdp
 Server: 192.168.10.202
 Dominio: CONIGLIARO.local (predefinito)
+Il prompt mostra il dominio CONIGLIARO.local e il prefisso account CONIGLIARO\; completalo con il nome utente di dominio.
 
 
 5. CONFIGURAZIONE PERSONALIZZATA: NOME, SERVER E DOMINIO
@@ -46,6 +50,7 @@ Dominio: CONIGLIARO.local (predefinito)
 Sul Desktop di tutti gli utenti troverai: Ufficio Nuovo.rdp
 Server: rdp.azienda.local, porta 3390
 Dominio: AZIENDA.local
+Il prompt mostra il dominio AZIENDA.local e il prefisso account AZIENDA\; completalo con il nome utente di dominio.
 
 
 6. ANTEPRIMA DELLA CONFIGURAZIONE, SENZA MODIFICHE
@@ -71,6 +76,7 @@ Mostra la diagnostica locale per il server predefinito 192.168.10.201.
 Sul Desktop di tutti gli utenti troverai: Infinity2027.rdp
 Server: 192.168.10.201
 Dominio: CONIGLIARO.local
+Il prompt mostra il dominio CONIGLIARO.local e il prefisso account CONIGLIARO\; completalo con il nome utente di dominio.
 
 
 9. AVVIO DAL FILE LOCALE, CON NOME E IP PERSONALIZZATI
@@ -80,3 +86,4 @@ Dominio: CONIGLIARO.local
 Sul Desktop di tutti gli utenti troverai: Infinity2024.rdp
 Server: 192.168.10.202
 Dominio: CONIGLIARO.local (predefinito)
+Il prompt mostra il dominio CONIGLIARO.local e il prefisso account CONIGLIARO\; completalo con il nome utente di dominio.

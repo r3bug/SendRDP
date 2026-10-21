@@ -114,6 +114,8 @@
         }
         if ($config.Dominio.Length -gt 253 -or $config.Dominio -notmatch '^[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?$' -or
             $config.Dominio.Contains('..')) { throw 'Dominio non valido.' }
+        # Il prompt RDP collaudato usa il dominio DNS e il prefisso NetBIOS separati.
+        $config['NetBiosDominio'] = ($config.Dominio -split '\.')[0]
         $config['ServerHost'] = $serverHost
         [pscustomobject]$config
     }
@@ -240,10 +242,11 @@
         param($Config)
         @(
             "full address:s:$($Config.Server)"
+            # Mantiene il comportamento del collegamento RDP storico: dominio DNS
+            # separato e prefisso NetBIOS gia presente nel nome utente.
             "domain:s:$($Config.Dominio)"
-            # Non inserire un falso utente DOMAIN\ nel file condiviso.
-            'username:s:'
-            'prompt for credentials:i:0'
+            "username:s:$($Config.NetBiosDominio)\"
+            'prompt for credentials:i:1'
             'promptcredentialonce:i:1'
             'enablecredsspsupport:i:1'
             'negotiate security layer:i:1'
