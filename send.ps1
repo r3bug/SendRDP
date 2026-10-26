@@ -3,6 +3,7 @@
 # Custom: & ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID'))) --nome Infinity2024 --ip 192.168.10.202
 # --anteprima: mostra la configurazione senza modificare file, registro o certificati.
 # --verifica: controlla vincoli di sicurezza e client aperti, senza modifiche o elevazione.
+# --mantienivecchirdp / --mantieni-vecchi-rdp: conserva i vecchi file RDP e aggiunge quello nuovo.
 & {
     param([object[]]$CliArguments)
     Set-StrictMode -Version Latest
@@ -73,7 +74,7 @@
         $config = [ordered]@{
             NomeFile = 'Infinity2027'; Server = '192.168.10.201'
             Dominio = 'CONIGLIARO.local'; Anteprima = $false; Verifica = $false
-            CancellaCredenzialiSalvate = $false
+            CancellaCredenzialiSalvate = $false; MantieniVecchiRdp = $false
         }
         $seen = @{}
         for ($i = 0; $i -lt $Arguments.Count; $i++) {
@@ -85,11 +86,12 @@
                 '^--?(anteprima|whatif)$' { 'Anteprima'; break }
                 '^--?verifica$' { 'Verifica'; break }
                 '^--?cancella-credenziali-salvate$' { 'CancellaCredenzialiSalvate'; break }
-                default { throw "Parametro sconosciuto: $option. Usa --nome, --ip, --dominio, --anteprima, --verifica, --cancella-credenziali-salvate." }
+                '^--?(mantieni-vecchi-rdp|mantienivecchirdp)$' { 'MantieniVecchiRdp'; break }
+                default { throw "Parametro sconosciuto: $option. Usa --nome, --ip, --dominio, --anteprima, --verifica, --mantienivecchirdp, --cancella-credenziali-salvate." }
             }
             if ($seen.ContainsKey($key)) { throw "Parametro duplicato: $option" }
             $seen[$key] = $true
-            if ($key -in @('Anteprima', 'Verifica', 'CancellaCredenzialiSalvate')) { $config[$key] = $true; continue }
+            if ($key -in @('Anteprima', 'Verifica', 'CancellaCredenzialiSalvate', 'MantieniVecchiRdp')) { $config[$key] = $true; continue }
             $i++
             if ($i -ge $Arguments.Count -or [string]$Arguments[$i] -match '^-') { throw "Manca il valore di $option." }
             $value = ([string]$Arguments[$i]).Trim()
@@ -550,7 +552,7 @@
     }
 
     function Publish-RdpFile {
-        param([string]$Stage, [string]$TargetPath, [string[]]$Desktops, [string]$RunDirectory)
+        param([string]$Stage, [string]$TargetPath, [string[]]$Desktops, [string]$RunDirectory, [bool]$KeepOldRdp)
         $oldFiles = [Collections.Generic.List[object]]::new()
         $failures = [Collections.Generic.List[string]]::new()
         foreach ($desktop in @($Desktops | Select-Object -Unique)) {
@@ -590,18 +592,21 @@
         New-Item -ItemType Directory -Path (Split-Path -Parent $TargetPath) -Force | Out-Null
         Copy-Item -LiteralPath $Stage -Destination $TargetPath -Force
         if ((Get-FileHash -LiteralPath $TargetPath).Hash -ne (Get-FileHash -LiteralPath $Stage).Hash) { throw 'Verifica del file pubblicato fallita.' }
-        foreach ($entry in $manifest) {
-            if ($entry.Original -ieq $TargetPath) { continue }
-            try {
-                if ((Get-FileHash -LiteralPath $entry.Original).Hash -ne $entry.Hash) { throw 'File cambiato dopo il backup.' }
-                Remove-Item -LiteralPath $entry.Original -Force
-            } catch { $failures.Add("$($entry.Original): $($_.Exception.Message)") }
+        if (-not $KeepOldRdp) {
+            foreach ($entry in $manifest) {
+                if ($entry.Original -ieq $TargetPath) { continue }
+                try {
+                    if ((Get-FileHash -LiteralPath $entry.Original).Hash -ne $entry.Hash) { throw 'File cambiato dopo il backup.' }
+                    Remove-Item -LiteralPath $entry.Original -Force
+                } catch { $failures.Add("$($entry.Original): $($_.Exception.Message)") }
+            }
         }
         if ($failures.Count) {
             $failures | Set-Content -LiteralPath (Join-Path $RunDirectory 'cleanup-errors.txt') -Encoding UTF8
             throw "Nuovo RDP pubblicato, ma pulizia incompleta: $($failures -join '; ')"
         }
-        Write-Host "RDP pubblico pubblicato: $TargetPath - $($manifest.Count) vecchi file salvati nel backup."
+        $action = if ($KeepOldRdp) { 'vecchi file conservati' } else { 'vecchi file salvati nel backup' }
+        Write-Host "RDP pubblico pubblicato: $TargetPath - $($manifest.Count) $action."
     }
 
     function Initialize-DeploymentWorkspace {
@@ -764,7 +769,7 @@ public static class SendRdpUserProcess {
             [IO.File]::WriteAllLines($stage, $RdpLines, [Text.Encoding]::Unicode)
             Protect-AndSignRdp $stage
             Write-Host '[5/5] Pubblico il nuovo RDP e pulisco i file con backup verificato.'
-            Publish-RdpFile $stage $TargetPath $profiles.Desktops $script:RunDirectory
+            Publish-RdpFile $stage $TargetPath $profiles.Desktops $script:RunDirectory $Config.MantieniVecchiRdp
             if ($profiles.Errors.Count) { throw "RDP pubblico installato, ma $($profiles.Errors.Count) profili non completati. Vedi profile-errors.txt in $script:RunDirectory." }
             $result.Status = 'Deployed'
             if (@($Readiness.Reasons).Count -or @($Readiness.QueryErrors).Count) {
@@ -811,7 +816,8 @@ public static class SendRdpUserProcess {
     Write-Host "Identita: $($identity.Name); SID: $($identity.User.Value); processo 64 bit: $([Environment]::Is64BitProcess)"
     Write-Host "Destinazione: $targetPath"
     if ($config.Anteprima) {
-        Write-Host 'ANTEPRIMA: nessuna modifica. Tutti i .rdp direttamente nei Desktop utente/pubblico saranno rimossi dopo backup.'
+        $previewAction = if ($config.MantieniVecchiRdp) { 'saranno conservati' } else { 'saranno rimossi dopo backup' }
+        Write-Host "ANTEPRIMA: nessuna modifica. I .rdp direttamente nei Desktop utente/pubblico $previewAction."
         $rdpLines
         return
     }

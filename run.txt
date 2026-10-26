@@ -87,3 +87,11 @@ Sul Desktop di tutti gli utenti troverai: Infinity2024.rdp
 Server: 192.168.10.202
 Dominio: CONIGLIARO.local (predefinito)
 Il prompt mostra il dominio CONIGLIARO.local e il prefisso account CONIGLIARO\; completalo con il nome utente di dominio.
+
+
+10. CONSERVA I VECCHI RDP E AGGIUNGE UN NUOVO NOME
+
+& ([scriptblock]::Create((irm 'https://pastebin.com/raw/ID_PASTE'))) -mantienivecchirdp -nome 'Infinity2027'
+
+I vecchi file `.rdp` restano sui Desktop e viene pubblicato anche `Infinity2027.rdp`.
+Se `Infinity2027.rdp` esiste gia, viene aggiornato; per aggiungere un collegamento distinto usa un nome diverso.
